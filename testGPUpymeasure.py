@@ -14,7 +14,7 @@ from pymeasure.display.windows import ManagedWindow
 from pymeasure.experiment import Procedure, Results
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 
-from pymeasure.instruments.keithley import Keithley2000
+from pymeasure.instruments.keithley import Keithley2182A
 
 
 class RandomProcedure(Procedure):
@@ -56,7 +56,8 @@ class MultimeterProcedure(Procedure):
     def startup(self):
         # Set conditions here
         log.info("Setting the multimeter")
-        multimeter.measure_voltage()
+        multimeter.set_filter()
+        multimeter.set_rate()
         ADCMT.write('*RST')
         ADCMT.write('VF')
 
@@ -68,7 +69,7 @@ class MultimeterProcedure(Procedure):
             ADCMT.write(f'SOV{Vol},LMI0.003')
             data = {
                 'Iteration':Vol,
-                'Voltage': multimeter.voltage
+                'Voltage': multimeter.measure_voltage()
             }
             self.emit('results', data)
             log.debug("Emitting results: %s" % data)
@@ -90,11 +91,15 @@ class MainWindow(ManagedWindow):
             sequencer=True,
             sequencer_inputs=['iterations','delay','filename'],
             # sequence_file = "gui_sequencer_example.txt",
+            # directory_input=True,
         )
         self.setWindowTitle('GUI Example')
+        # self.directory = r"C:\Users\Ando_lab\Documents\Haku\measureingSystems"
 
     def queue(self,procedure=None):
         filename = tempfile.mktemp()
+        # directory=self.directory
+        # filename=directory
         # filename = filename
 
         if procedure is None:
@@ -107,7 +112,7 @@ class MainWindow(ManagedWindow):
 
 
 if __name__ == "__main__":
-    multimeter = Keithley2000("GPIB::14")
+    multimeter = Keithley2182A("GPIB::06")
     import pyvisa
     rm = pyvisa.ResourceManager()
     ADCMT = rm.open_resource('GPIB::01')
