@@ -41,6 +41,7 @@ from pymeasure.experiment import Procedure
 from pymeasure.display.windows import ManagedImageWindow  # new ManagedWindow class
 from pymeasure.experiment import FloatParameter
 from pymeasure.display.Qt import QtWidgets
+from pymeasure.display.widgets.plot_widget import PlotWidget
 
 import logging
 log = logging.getLogger(__name__)
@@ -96,7 +97,13 @@ class TestImageProcedure(Procedure):
 
 class TestImageGUI(ManagedImageWindow):
 
-    def __init__(self):
+    def __init__(self,procedure_class,**kwargs):
+        self.plot_widget = PlotWidget("Results Graph2", procedure_class.DATA_COLUMNS)
+        self.plot_widget.setMinimumSize(100, 200)
+        if "widget_list" not in kwargs:
+            kwargs["widget_list"] = ()
+        kwargs["widget_list"] = kwargs["widget_list"] + (self.plot_widget,)
+
         # Note the new z axis. This can be changed in the GUI. the X and Y axes
         # must be the DATA_COLUMNS corresponding to our special parameters.
         super().__init__( #上書きした継承した親クラスの関数を使う
@@ -106,8 +113,10 @@ class TestImageGUI(ManagedImageWindow):
             z_axis='pixel_data',
             inputs=['X_start', 'X_end', 'X_step', 'Y_start', 'Y_end', 'Y_step',
                     'delay'],
-            displays=['X_start', 'X_end', 'Y_start', 'Y_end', 'delay']
+            displays=['X_start', 'X_end', 'Y_start', 'Y_end', 'delay'],
+            **kwargs
         )
+
         self.setWindowTitle('PyMeasure Image Test')
 
     def queue(self):
@@ -120,6 +129,14 @@ class TestImageGUI(ManagedImageWindow):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    window = TestImageGUI()
+    window = TestImageGUI(TestImageProcedure)
     window.show()
     sys.exit(app.exec())
+
+#Result graph tabはclass ManagedWindow(ManagedWindowBase) にはいってて        
+# self.plot_widget = PlotWidget("Results Graph", procedure_class.DATA_COLUMNS, self.x_axis,
+# self.y_axis, linewidth=linewidth)
+# self.plot_widget.setMinimumSize(100, 200)
+
+#Image tabはclass ManagedImageWindow(ManagedWindow)のself.image_widget = ImageWidget(
+#            "Image", procedure_class.DATA_COLUMNS, x_axis, y_axis, z_axis)に入ってた
