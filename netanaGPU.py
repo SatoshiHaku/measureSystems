@@ -9,135 +9,92 @@ from time import sleep
 from pymeasure.log import console_log
 
 from pymeasure.display.Qt import QtWidgets
-from pymeasure.display.windows import ManagedWindow
+# from pymeasure.display.windows import ManagedWindow
+from pymeasure.display.windows.managed_dock_window import ManagedDockWindow #from latest version
+from pymeasure.display.widgets.image_widget import ImageWidget
 
 from pymeasure.experiment import Procedure, Results
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 
-from pymeasure.instruments.keithley import Keithley2182A
 from pymeasure.instruments.agilent import AgilentN5222A
 
-
-class RandomProcedure(Procedure):
-
-    iterations = IntegerParameter('Loop Iterations')
-    delay = FloatParameter('Delay Time', units='s', default=0.2)
-    seed = Parameter('Random Seed', default='12345')
-
-    DATA_COLUMNS = ['Iteration', 'Random Number']
-
-    def startup(self):
-        log.info("Setting the seed of the random number generator")
-        random.seed(self.seed)
-
-    def execute(self):
-        log.info("Starting the loop of %d iterations" % self.iterations)
-        for i in range(self.iterations):
-            data = {
-                'Iteration': i,
-                'Random Number': random.random()
-            }
-            self.emit('results', data)
-            log.debug("Emitting results: %s" % data)
-            self.emit('progress', 100 * i / self.iterations)
-            sleep(self.delay)
-            if self.should_stop():
-                log.warning("Caught the stop flag in the procedure")
-                break
-
-
-class MultimeterProcedure(Procedure):
-
-    iterations = IntegerParameter('Loop Iterations') #name in () is title
-    delay = FloatParameter('Delay Time', units='s', default=0.2)
-    filename = Parameter('File Name', default='aaa.csv')
-
-    DATA_COLUMNS = ['Iteration', 'Voltage']
-
-    def startup(self):
-        # Set conditions here
-        log.info("Setting the multimeter")
-        multimeter.set_filter()
-        multimeter.set_rate()
-        ADCMT.write('*RST')
-        ADCMT.write('VF')
-
-    def execute(self):
-        # Put the runnning codes here
-        log.info("Starting the loop of %d iterations" % self.iterations)
-        for i in range(self.iterations):
-            Vol = i*10**-3
-            ADCMT.write(f'SOV{Vol},LMI0.003')
-            data = {
-                'Iteration':Vol,
-                'Voltage': multimeter.measure_voltage()
-            }
-            self.emit('results', data)
-            log.debug("Emitting results: %s" % data)
-            self.emit('progress', 100 * i / self.iterations)
-            sleep(self.delay)
-            if self.should_stop():
-                log.warning("Caught the stop flag in the procedure")
-                break
 
 class NetAnaProcedure(Procedure):
 
     iterations = IntegerParameter('Loop Iterations',default=1) #name in () is title
-    delay = FloatParameter('Delay Time', units='s', default=0.2)
+    delay = FloatParameter('Delay Time', units='s', default=0.01)
     filename = Parameter('File Name', default='aaa.csv')
     startFreq = IntegerParameter("start frequency",units="Hz",default=1e8)
     endFreq = IntegerParameter("end frequency",units="Hz",default=1e9)
     power = IntegerParameter("power",units="dbm",default=0)
-    sweeptime = FloatParameter("sweep time",units="s",default=1)
-    points = IntegerParameter("number of points", default=101)
+    sweeptime = FloatParameter("sweep time",units="s",default=0.1)#ポイント数をあげるとこれを短くしないとだめ　なぜ？
+    points = IntegerParameter("number of points", default=501)
 
-    DATA_COLUMNS = ['frequency','r',"N"]#must be same names to data columns
+    DATA_COLUMNS = ['frequency','S21',"S11","N"]#must be same names to data columns
 
     def startup(self):
         # Set conditions here
         log.info("Setting the netana")
         netana.set_preset()
-        netana.setup_SPARM()
-        netana.set_sweep(startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
-        netana.set_power(P=self.power)
-        netana.set_autoYscale()
-        netana.set_average()
+        netana.setup_SPARM(n=1,SPAR="S21")
+        netana.setup_SPARM(n=2,SPAR="S11")
+
+        netana.set_sweep(n=1,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
+        netana.set_sweep(n=2,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
+
+        netana.set_power(n=1,P=self.power)
+        netana.set_power(n=2,P=self.power)
+
+        netana.set_autoYscale(n=1)
+        netana.set_autoYscale(n=2)
+
+        netana.set_average(n=1)
+        netana.set_average(n=2)
+
         sleep(1)
 
 
     def execute(self):
         # Put the runnning codes here
-        netana.parse_data()
-        x,theta,r = netana.get_data()
-        log.info("Starting the loop of %d iterations" % len(x))
-        for i in range(len(x)):
+        netana.parse_data(n=1)
+        netana.parse_data(n=2)
+
+        x1,theta1,r1 = netana.get_data(n=1)
+        x2,theta2,r2 = netana.get_data(n=2)
+
+        log.info("Starting the loop of %d iterations" % len(x1))
+        for i in range(len(x1)):
 
             data = {
-                'frequency':x[i],
-                'r': r[i],
+                'frequency':x1[i],
+                'S21': r1[i],
+                "S11": r2[i],
                 "N":i
             }#must be same names to DATA_COLUMNS
             # data={"inter":i}
             self.emit('results', data)
             log.debug("Emitting results: %s" % data)
-            self.emit('progress', 100 * i /len(x))
+            self.emit('progress', 100 * i /len(x1))
             sleep(self.delay)
 
             if self.should_stop():
                 log.warning("Caught the stop flag in the procedure")
                 break
+        netana.set_power_off()
+        netana.set_preset()
+
 # netana = rm.open_resource('GPIB::16')
 
 
-class MainWindow(ManagedWindow):
+class MainWindow(ManagedDockWindow):
 
     def __init__(self):
         super().__init__(
             procedure_class=NetAnaProcedure,
             inputs=['iterations', 'delay',"filename","startFreq","endFreq","power","sweeptime","points"],
             displays=['iterations', 'delay',"filename","startFreq","endFreq","power","sweeptime","points"],#include in progress
-            x_axis='N',#default(must be in data columns)
-            y_axis='r',
+            x_axis=['frequency',"frequency"],#default(must be in data columns) if you use ManagedDockWindow, use list of columns
+            y_axis=['S21',"S11"],
             # sequencer=True,
             # sequencer_inputs=['iterations','delay',"filename","startFreq","endFreq","power","sweeptime"]
             # sequence_file = "gui_sequencer_example.txt",
