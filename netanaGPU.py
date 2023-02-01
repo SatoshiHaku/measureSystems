@@ -36,15 +36,25 @@ class NetAnaProcedure(Procedure):
         # Set conditions here
         log.info("Setting the netana")
         netana.set_preset()
+
+
+
+
+    def execute(self):
+        # Put the runnning codes here
         netana.setup_SPARM(n=1,SPAR="S21")
         netana.setup_SPARM(n=2,SPAR="S11")
         netana.setup_SPARM(n=3,SPAR="S12")
         netana.setup_SPARM(n=4,SPAR="S22")
 
-        netana.set_sweep(n=1,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
-        netana.set_sweep(n=2,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
-        netana.set_sweep(n=3,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
-        netana.set_sweep(n=4,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
+        netana.set_sweep(n=1,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
+        netana.set_sweep(n=2,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
+        netana.set_sweep(n=3,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
+        netana.set_sweep(n=4,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
+        # netana.set_sweep(n=1,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
+        # netana.set_sweep(n=2,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
+        # netana.set_sweep(n=3,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
+        # netana.set_sweep(n=4,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
 
         netana.set_power(n=1,P=self.power)
         netana.set_power(n=2,P=self.power)
@@ -62,11 +72,6 @@ class NetAnaProcedure(Procedure):
         netana.set_average(n=4)
 
         sleep(1)
-
-
-
-    def execute(self):
-        # Put the runnning codes here
         netana.parse_data(n=1)
         netana.parse_data(n=2)
         netana.parse_data(n=3)
