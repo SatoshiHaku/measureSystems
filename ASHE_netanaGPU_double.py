@@ -69,7 +69,7 @@ class NetAnaProcedure(Procedure):
         # netana.set_average(n=1)
     
 
-
+        # want to measure the V(S21) and V(S12) at the same time. But, cannot now. -> same sygnal from S21 and also S12.
         for i in range(self.anglepoints):
             netana.set_preset()
             deltaAngle = 360/self.anglepoints*i
