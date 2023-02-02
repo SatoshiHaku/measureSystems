@@ -1,0 +1,3 @@
+[submodule "pymeasure"]
+	path = pymeasure
+	url = https://github.com/SatoshiHaku/pymeasure.git
