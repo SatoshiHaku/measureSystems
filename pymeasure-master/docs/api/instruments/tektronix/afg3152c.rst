@@ -1,7 +1,0 @@
-#####################################
-AFG3152C Arbitrary function generator
-#####################################
-
-.. autoclass:: pymeasure.instruments.tektronix.AFG3152C
-    :members:
-    :show-inheritance:
