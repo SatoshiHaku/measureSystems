@@ -24,11 +24,12 @@ class NetAnaProcedure(Procedure):
     iterations = IntegerParameter('Loop Iterations',default=1) #name in () is title
     delay = FloatParameter('Delay Time', units='s', default=0.01)
     filename = Parameter('File Name', default='aaa.csv')
-    startFreq = IntegerParameter("start frequency",units="Hz",default=1e8)
-    endFreq = IntegerParameter("end frequency",units="Hz",default=1e9)
+    startFreq = FloatParameter("start frequency",units="GHz",default=1)
+    endFreq = FloatParameter("end frequency",units="GHz",default=3)
     power = IntegerParameter("power",units="dbm",default=0)
     sweeptime = FloatParameter("sweep time",units="s",default=0.1)#ポイント数をあげるとこれを短くしないとだめ　なぜ？
     points = IntegerParameter("number of points", default=501)
+
 
     DATA_COLUMNS = ['frequency','S21',"S11","S12","S22","N"]#must be same names to data columns
 
@@ -42,15 +43,17 @@ class NetAnaProcedure(Procedure):
 
     def execute(self):
         # Put the runnning codes here
+        startFreq = self.startFreq*10**9
+        endFreq = self.endFreq*10**9
         netana.setup_SPARM(n=1,SPAR="S21")
         netana.setup_SPARM(n=2,SPAR="S11")
         netana.setup_SPARM(n=3,SPAR="S12")
         netana.setup_SPARM(n=4,SPAR="S22")
 
-        netana.set_sweep(n=1,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
-        netana.set_sweep(n=2,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
-        netana.set_sweep(n=3,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
-        netana.set_sweep(n=4,startFreq=self.startFreq,endFreq=self.endFreq,time="AUTO",num=self.points)
+        netana.set_sweep(n=1,startFreq=startFreq,endFreq=endFreq,time="AUTO",num=self.points)
+        netana.set_sweep(n=2,startFreq=startFreq,endFreq=endFreq,time="AUTO",num=self.points)
+        netana.set_sweep(n=3,startFreq=startFreq,endFreq=endFreq,time="AUTO",num=self.points)
+        netana.set_sweep(n=4,startFreq=startFreq,endFreq=endFreq,time="AUTO",num=self.points)
         # netana.set_sweep(n=1,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
         # netana.set_sweep(n=2,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
         # netana.set_sweep(n=3,startFreq=self.startFreq,endFreq=self.endFreq,time=self.sweeptime,num=self.points)
