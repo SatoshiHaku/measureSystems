@@ -29,7 +29,7 @@ class NetAnaProcedure(Procedure):
     sweeptime = FloatParameter("sweep time",units="s",default=50)#ポイント数をあげるとこれを短くしないとだめ　なぜ？
     points = IntegerParameter("number of points", default=10000)
     anglepoints = IntegerParameter("number of points for angle", default=36) 
-    voltage = FloatParameter('voltage for magnetic field', units='V', default=1)
+    voltage = IntegerParameter('voltage for magnetic field', units='mV', default=1000)
     RateMH = FloatParameter("magnetic field / voltage", units="mT/V", default=43.1) 
     Spara = Parameter("S21 or S12",default="S21" )
     averagePoints = IntegerParameter("number of points for average", default=10) 
@@ -58,9 +58,10 @@ class NetAnaProcedure(Procedure):
         # Put the runnning codes here
         # netana.parse_data(n=1)
         # x1,theta1,r1 = netana.get_data(n=1)
+        voltage = self.voltage*10**-3
 
         log.info("Starting the loop of %d iterations" % self.anglepoints)
-        adcmt.apply_voltage(source_voltage=self.voltage)
+        adcmt.apply_voltage(source_voltage=voltage)
         sleep(3)
         netana.setup_SPARM(n=1,SPAR=self.Spara)
         netana.set_sweep(n=1,type="CW",fCW=self.freq_cw,time=self.sweeptime,num=self.points)
@@ -72,7 +73,7 @@ class NetAnaProcedure(Procedure):
         sleep(1)
 
         for i in range(self.anglepoints):
-            netana.set_preset()
+            # netana.set_preset()
             deltaAngle = 360/self.anglepoints*i
 
             Vs21_l = []
@@ -124,14 +125,26 @@ class MainWindow(ManagedDockWindow):
         self.setWindowTitle('ASHE GUI Example')
         self.directory = r"C:/Users/Ando_lab/Documents/Haku/measureingSystems"
 
+    # def queue(self,procedure=None):
+    #     # filename = tempfile.mktemp()
+    #     directory=self.directory
+    #     filename=unique_filename(directory,)
+
+    #     if procedure is None:
+    #         procedure = self.make_procedure()
+    #     results = Results(procedure, filename)
+
+    #     experiment = self.new_experiment(results)
+
+    #     self.manager.queue(experiment)
     def queue(self,procedure=None):
         # filename = tempfile.mktemp()
         directory=self.directory
-        filename=unique_filename(directory)
-        # filename = f"{directory}/{}"
 
         if procedure is None:
             procedure = self.make_procedure()
+        filename=unique_filename(directory=directory,procedure=procedure,dated_folder=True,prefix="",suffix="_{S21 or S12}_{cw frequency}Hz_{voltage for magnetic field}mV_{power}dbm")
+
         results = Results(procedure, filename)
 
         experiment = self.new_experiment(results)
