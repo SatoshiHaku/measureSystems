@@ -143,7 +143,7 @@ class MainWindow(ManagedDockWindow):
 
         if procedure is None:
             procedure = self.make_procedure()
-        filename=unique_filename(directory=directory,procedure=procedure,dated_folder=True,prefix="",suffix="_{S21 or S12}_{cw frequency}Hz_{voltage for magnetic field}mV_{power}dbm")
+        filename=unique_filename(directory=directory,procedure=procedure,dated_folder=False,prefix="",suffix="_{S21 or S12}_{cw frequency}Hz_{voltage for magnetic field}mV_{power}dbm_angle")
 
         results = Results(procedure, filename)
 

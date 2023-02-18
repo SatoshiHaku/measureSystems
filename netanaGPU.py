@@ -23,12 +23,13 @@ class NetAnaProcedure(Procedure):
 
     iterations = IntegerParameter('Loop Iterations',default=1) #name in () is title
     delay = FloatParameter('Delay Time', units='s', default=0.01)
-    filename = Parameter('File Name', default='aaa.csv')
     startFreq = FloatParameter("start frequency",units="GHz",default=1)
     endFreq = FloatParameter("end frequency",units="GHz",default=3)
     power = IntegerParameter("power",units="dbm",default=0)
     sweeptime = FloatParameter("sweep time",units="s",default=0.1)#ポイント数をあげるとこれを短くしないとだめ　なぜ？
     points = IntegerParameter("number of points", default=501)
+    filename = Parameter('memo', default='')
+
 
 
     DATA_COLUMNS = ['frequency','S21',"S11","S12","S22","N"]#must be same names to data columns
@@ -116,12 +117,12 @@ class MainWindow(ManagedDockWindow):
     def __init__(self):
         super().__init__(
             procedure_class=NetAnaProcedure,
-            inputs=['iterations', 'delay',"filename","startFreq","endFreq","power","sweeptime","points"],
-            displays=['iterations', 'delay',"filename","startFreq","endFreq","power","sweeptime","points"],#include in progress
+            inputs=['iterations', 'delay',"startFreq","endFreq","power","sweeptime","points","filename"],
+            displays=['iterations', 'delay',"startFreq","endFreq","power","sweeptime","points","filename"],#include in progress
             x_axis=['frequency'],#default(must be in data columns) if you use ManagedDockWindow, use list of columns
             y_axis=['S21',"S11","S12","S22"],
             sequencer=True,
-            sequencer_inputs=['iterations','delay',"filename","startFreq","endFreq","power","sweeptime","points"],
+            sequencer_inputs=['iterations', 'delay',"startFreq","endFreq","power","sweeptime","points","filename"],
             # sequence_file = "gui_sequencer_example.txt",
             directory_input=True,
         )
@@ -131,11 +132,11 @@ class MainWindow(ManagedDockWindow):
     def queue(self,procedure=None):
         # filename = tempfile.mktemp()
         directory=self.directory
-        filename=unique_filename(directory)
         # filename = f"{directory}/{}"
 
         if procedure is None:
             procedure = self.make_procedure()
+        filename=unique_filename(directory=directory,procedure=procedure,dated_folder=False,prefix="",suffix="_{memo}_Spara")
         results = Results(procedure, filename)
 
         experiment = self.new_experiment(results)
