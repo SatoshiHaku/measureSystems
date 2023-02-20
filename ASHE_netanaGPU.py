@@ -122,7 +122,7 @@ class MainWindow(ManagedDockWindow):
             # sequence_file = "gui_sequencer_example.txt",
             directory_input=True,
         )
-        self.setWindowTitle('ASHE GUI Example')
+        self.setWindowTitle('ASHE measurement')
         self.directory = r"C:/Users/Ando_lab/Documents/Haku/measureingSystems"
 
     # def queue(self,procedure=None):

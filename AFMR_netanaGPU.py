@@ -35,10 +35,11 @@ class NetAnaProcedure(Procedure):
     Spara = Parameter("S21 or S12",default="S21" )
     averagePoints = IntegerParameter("number of points for average", default=1) 
     angle = IntegerParameter("angle", default=135) 
+    memo = Parameter("memo",default="")
 
 # averaging??
 
-    DATA_COLUMNS = ['frequency',"power","magnetic field",'VolS21',"stdS21","S21 or S12","angle","theta","S"]#must be same names to data columns
+    DATA_COLUMNS = ['frequency',"power","magnetic field",'VolS21',"stdS21","S21 or S12","angle","theta","S","memo"]#must be same names to data columns
     def startup(self):
         # Set conditions here
         log.info("Setting the nanovoltmeter")
@@ -110,7 +111,8 @@ class NetAnaProcedure(Procedure):
                 'VolS21':V_s21_ave,
                 "stdS21":std_s21,
                 "S21 or S12":self.Spara,
-                "angle":self.angle
+                "angle":self.angle,
+                "memo":self.memo
             }
             self.emit('results', data)
             log.debug("Emitting results: %s" % data)
@@ -145,26 +147,28 @@ class MainWindow(ManagedDockWindow):
     def __init__(self):
         super().__init__(
             procedure_class=NetAnaProcedure,
-            inputs=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara"],#must be all input columns
-            displays=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara"],#include in progress
+            inputs=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara","memo"],#must be all input columns
+            displays=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara","memo"],#include in progress
             x_axis=['magnetic field'],#default(must be in data columns) if you use ManagedDockWindow, use list of columns
             y_axis=["VolS21","S"],
             sequencer=True,
-            sequencer_inputs=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","endvoltage","RateMH","averagePoints","Spara"],
+            sequencer_inputs=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","endvoltage","RateMH","averagePoints","Spara","memo"],
             # sequence_file = "gui_sequencer_example.txt",
             directory_input=True,
         )
-        self.setWindowTitle('AFMR GUI Example')
+        self.setWindowTitle('AFMR measurement')
         self.directory = r"C:/Users/Ando_lab/Documents/Haku/measureingSystems"
 
     def queue(self,procedure=None):
         # filename = tempfile.mktemp()
         directory=self.directory
-        filename=unique_filename(directory)
+        # filename=unique_filename(directory)
         # filename = f"{directory}/{}"
 
         if procedure is None:
             procedure = self.make_procedure()
+        filename=unique_filename(directory=directory,procedure=procedure,dated_folder=False,\
+                                 prefix="",suffix="AFMR_{angle}deg_{S21 or S12}_{cw frequency}Hz_{power}dbm_{memo}")
         results = Results(procedure, filename)
 
         experiment = self.new_experiment(results)

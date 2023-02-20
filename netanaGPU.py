@@ -126,7 +126,7 @@ class MainWindow(ManagedDockWindow):
             # sequence_file = "gui_sequencer_example.txt",
             directory_input=True,
         )
-        self.setWindowTitle('Netana GUI Example')
+        self.setWindowTitle('S parameters measurement')
         self.directory = r"C:/Users/Ando_lab/Documents/Haku/measureingSystems"
 
     def queue(self,procedure=None):
