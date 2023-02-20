@@ -85,8 +85,6 @@ class NetAnaProcedure(Procedure):
                 netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=self.sweeptime,num=self.points,BW=1)
                 netana.set_autoYscale(n=1)
 
-
-
             Vs21_l = []
             for j in range(self.averagePoints):
                 Vs21_l.append(nanovol.measure_voltage())
@@ -114,6 +112,7 @@ class NetAnaProcedure(Procedure):
                 "angle":self.angle,
                 "memo":self.memo
             }
+            
             self.emit('results', data)
             log.debug("Emitting results: %s" % data)
             self.emit('progress', 100 * i /self.voltagepoints)
