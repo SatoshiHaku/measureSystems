@@ -1,0 +1,1 @@
+- "cw frequency", "range(5,12)"

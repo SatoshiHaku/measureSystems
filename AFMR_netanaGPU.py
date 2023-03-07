@@ -23,12 +23,12 @@ from pymeasure.instruments.adcmt import Adcmt6240A
 
 class NetAnaProcedure(Procedure):
 
-    delay = FloatParameter('Delay Time', units='s', default=0.1)
+    delay = FloatParameter('Delay Time', units='s', default=0.3)
     freq_cw = FloatParameter("cw frequency",units="GHz",default=1.94)
     power = IntegerParameter("power",units="dbm",default=13)
-    sweeptime = FloatParameter("sweep time",units="s",default=100)#ポイント数をあげるとこれを短くしないとだめ　なぜ？
+    # sweeptime = FloatParameter("sweep time",units="s",default=100)#ポイント数をあげるとこれを短くしないとだめ　なぜ？
     points = IntegerParameter("number of points", default=1000)
-    voltagepoints = IntegerParameter("number of points for magnetic field", default=1000) 
+    voltagepoints = IntegerParameter("number of points for magnetic field", default=500) 
     startvoltage = FloatParameter('start voltage for magnetic field', units='V', default=-0.7)
     endvoltage = FloatParameter('end voltage for magnetic field', units='V', default=0.7)
     RateMH = FloatParameter("magnetic field / voltage", units="mT/V", default=43.1) 
@@ -36,7 +36,6 @@ class NetAnaProcedure(Procedure):
     averagePoints = IntegerParameter("number of points for average", default=1) 
     angle = IntegerParameter("angle", default=135) 
     memo = Parameter("memo",default="")
-
 # averaging??
 
     DATA_COLUMNS = ['frequency',"power","magnetic field",'VolS21',"stdS21","S21 or S12","angle","theta","S","memo"]#must be same names to data columns
@@ -62,6 +61,8 @@ class NetAnaProcedure(Procedure):
         # Put the runnning codes here
         # netana.parse_data(n=1)
         # x1,theta1,r1 = netana.get_data(n=1)
+        sweeptime = self.delay*self.voltagepoints
+
         freq_cw = self.freq_cw * 10**9
 
         log.info("Starting the loop of %d iterations" % self.voltagepoints)
@@ -70,24 +71,32 @@ class NetAnaProcedure(Procedure):
         #if increase band width(counts), require longer time  
 
         adcmt.apply_voltage(self.startvoltage)
+        import time
+        # netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=self.sweeptime,num=self.points,BW=1)
+        netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=sweeptime,num=self.points,BW=1)
+        
+        netana.set_power(n=1,P=self.power)
+        netana.set_autoYscale(n=1)
+        netana.set_average(n=1,counts=10)
+        sleep(1)
 
+        # netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=self.sweeptime,num=self.points,BW=1)
+        netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=sweeptime,num=self.points,BW=1)
+
+        netana.set_average(n=1,counts=10)
+        netana.set_power(n=1,P=self.power)
+        netana.set_autoYscale(n=1)
+        sleep(1)
         for i in range(self.voltagepoints):
-            
+            start = time.time()
+
             deltaVoltage = self.startvoltage + (self.endvoltage-self.startvoltage)/self.voltagepoints*i
             adcmt.apply_voltage(source_voltage=deltaVoltage)
-            if i == 0:
-                netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=self.sweeptime,num=self.points,BW=1)
-                netana.set_power(n=1,P=self.power)
-                netana.set_autoYscale(n=1)
-                netana.set_average(n=1,counts=1)
-                sleep(1)
-
-                netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=self.sweeptime,num=self.points,BW=1)
-                netana.set_autoYscale(n=1)
-
             Vs21_l = []
+            nanovol.measure_voltage()
             for j in range(self.averagePoints):
                 Vs21_l.append(nanovol.measure_voltage())
+                sleep(20*10**-3)
             if self.averagePoints > 1:
                 V_s21_ave = sum(Vs21_l)/self.averagePoints
                 std_s21 = stdev(Vs21_l)
@@ -100,8 +109,6 @@ class NetAnaProcedure(Procedure):
             # data={"inter":i}
 
 
-
-
             data = {
                 'frequency':freq_cw,
                 "power":self.power,
@@ -112,11 +119,18 @@ class NetAnaProcedure(Procedure):
                 "angle":self.angle,
                 "memo":self.memo
             }
-            
+            now = time.time()
+            dif = now-start
+            log.info(f"now is {dif}s")
+
             self.emit('results', data)
             log.debug("Emitting results: %s" % data)
             self.emit('progress', 100 * i /self.voltagepoints)
-            sleep(self.delay)
+
+
+            sleep(self.delay-dif)
+            end = time.time()
+            log.info(f"measurement period is {end-start}s")
 
             if self.should_stop():
                 log.warning("Caught the stop flag in the procedure")
@@ -131,7 +145,7 @@ class NetAnaProcedure(Procedure):
         x1,theta1,r1 = netana.get_data(n=1)
         log.info(f"{r1[0]}")
         for k in range(len(x1)):
-            deltaVoltage = self.startvoltage + (self.endvoltage-self.startvoltage)/self.voltagepoints*k
+            deltaVoltage = self.startvoltage + (self.endvoltage-self.startvoltage)/len(x1)*k
             data["magnetic field"] = self.RateMH*deltaVoltage
             data["theta"] =theta1[k]
             data["S"] = r1[k]
@@ -146,12 +160,12 @@ class MainWindow(ManagedDockWindow):
     def __init__(self):
         super().__init__(
             procedure_class=NetAnaProcedure,
-            inputs=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara","memo"],#must be all input columns
-            displays=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara","memo"],#include in progress
+            inputs=['delay',"freq_cw","angle","power","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara","memo"],#must be all input columns
+            displays=['delay',"freq_cw","angle","power","points","voltagepoints","startvoltage","endvoltage","RateMH","averagePoints","Spara","memo"],#include in progress
             x_axis=['magnetic field'],#default(must be in data columns) if you use ManagedDockWindow, use list of columns
             y_axis=["VolS21","S"],
             sequencer=True,
-            sequencer_inputs=['delay',"freq_cw","angle","power","sweeptime","points","voltagepoints","endvoltage","RateMH","averagePoints","Spara","memo"],
+            sequencer_inputs=['delay',"freq_cw","angle","power","points","voltagepoints","endvoltage","RateMH","averagePoints","Spara","memo"],
             # sequence_file = "gui_sequencer_example.txt",
             directory_input=True,
         )
