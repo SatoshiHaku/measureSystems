@@ -36,10 +36,12 @@ class NetAnaProcedure(Procedure):
     averagePoints = IntegerParameter("number of points for average", default=1) 
     angle = IntegerParameter("angle", default=135) 
     memo = Parameter("memo",default="")
-# averaging??
+    Spara_averagecounts = IntegerParameter("angle", default=100)
+
 
     DATA_COLUMNS = ['frequency',"power","magnetic field",'VolS21',"stdS21","S21 or S12","angle","theta","S","memo"]#must be same names to data columns
     def startup(self):
+        
         # Set conditions here
         log.info("Setting the nanovoltmeter")
         nanovol.reset()
@@ -77,32 +79,52 @@ class NetAnaProcedure(Procedure):
         
         netana.set_power(n=1,P=self.power)
         netana.set_autoYscale(n=1)
-        netana.set_average(n=1,counts=10)
+        netana.set_average(n=1,counts=self.Spara_averagecounts)
         sleep(1)
 
         # netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=self.sweeptime,num=self.points,BW=1)
         netana.set_sweep(n=1,type="CW",fCW=freq_cw,time=sweeptime,num=self.points,BW=1)
 
-        netana.set_average(n=1,counts=10)
+        netana.set_average(n=1,counts=self.Spara_averagecounts)
         netana.set_power(n=1,P=self.power)
         netana.set_autoYscale(n=1)
         sleep(1)
+
+        delta_voltage = (self.endvoltage - self.startvoltage) / self.voltagepoints
         for i in range(self.voltagepoints):
             start = time.time()
-
-            deltaVoltage = self.startvoltage + (self.endvoltage-self.startvoltage)/self.voltagepoints*i
+            deltaVoltage = self.startvoltage + delta_voltage * i
             adcmt.apply_voltage(source_voltage=deltaVoltage)
-            Vs21_l = []
-            nanovol.measure_voltage()
-            for j in range(self.averagePoints):
-                Vs21_l.append(nanovol.measure_voltage())
-                sleep(20*10**-3)
-            if self.averagePoints > 1:
-                V_s21_ave = sum(Vs21_l)/self.averagePoints
-                std_s21 = stdev(Vs21_l)
-            else:
-                V_s21_ave = sum(Vs21_l)
-                std_s21 = 0
+            sleep(0.1)
+
+            Vs21_l = [nanovol.measure_voltage() for j in range(self.averagePoints)]
+            V_s21_ave = sum(Vs21_l) / self.averagePoints if self.averagePoints > 1 else sum(Vs21_l)
+            std_s21 = stdev(Vs21_l) if self.averagePoints > 1 else 0
+
+            results = {
+                "voltage": deltaVoltage,
+                "Vs21": V_s21_ave,
+                "std_s21": std_s21
+            }
+            self.emit("results", results)
+
+        # for i in range(self.voltagepoints):
+        #     start = time.time()
+
+        #     deltaVoltage = self.startvoltage + (self.endvoltage-self.startvoltage)/self.voltagepoints*i
+        #     adcmt.apply_voltage(source_voltage=deltaVoltage)
+        #     sleep(0.1)
+        #     Vs21_l = []
+        #     nanovol.measure_voltage()
+        #     for j in range(self.averagePoints):
+        #         Vs21_l.append(nanovol.measure_voltage())
+        #         sleep(20*10**-3)
+        #     if self.averagePoints > 1:
+        #         V_s21_ave = sum(Vs21_l)/self.averagePoints
+        #         std_s21 = stdev(Vs21_l)
+        #     else:
+        #         V_s21_ave = sum(Vs21_l)
+        #         std_s21 = 0
             
 
 #must be same names to DATA_COLUMNS
@@ -127,8 +149,8 @@ class NetAnaProcedure(Procedure):
             log.debug("Emitting results: %s" % data)
             self.emit('progress', 100 * i /self.voltagepoints)
 
-
-            sleep(self.delay-dif)
+            if self.delay-dif > 0:
+                sleep(self.delay-dif)
             end = time.time()
             log.info(f"measurement period is {end-start}s")
 
@@ -144,12 +166,21 @@ class NetAnaProcedure(Procedure):
         netana.parse_data(n=1)
         x1,theta1,r1 = netana.get_data(n=1)
         log.info(f"{r1[0]}")
-        for k in range(len(x1)):
-            deltaVoltage = self.startvoltage + (self.endvoltage-self.startvoltage)/len(x1)*k
-            data["magnetic field"] = self.RateMH*deltaVoltage
-            data["theta"] =theta1[k]
-            data["S"] = r1[k]
-            self.emit('results', data)
+
+        delta_voltage = (self.endvoltage - self.startvoltage) / len(x1)
+        for idx, x in enumerate(x1):
+            data = {
+                "magnetic field": self.RateMH * (self.startvoltage + delta_voltage * idx),
+                "theta": theta1[idx],
+                "S": r1[idx]
+            }
+            self.emit("results", data)
+        # for k in range(len(x1)):
+        #     deltaVoltage = self.startvoltage + (self.endvoltage-self.startvoltage)/len(x1)*k
+        #     data["magnetic field"] = self.RateMH*deltaVoltage
+        #     data["theta"] =theta1[k]
+        #     data["S"] = r1[k]
+        #     self.emit('results', data)
         netana.set_power_off()
         netana.set_preset()
         adcmt.shutdown()
